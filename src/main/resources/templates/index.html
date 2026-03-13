@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>포트폴리오</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-left">
+            <h1 class="logo">My Portfolio</h1>
+        </div>
+
+        <div class="header-right">
+            <span class="guest-badge" th:text="${guestNickname}">게스트_기본닉네임</span>
+        </div>
+    </header>
+
+    <main class="content">
+        <section class="hero">
+            <h2>포트폴리오에 오신 것을 환영합니다.</h2>
+            <p>
+                이 페이지는 Spring Boot 기반으로 구성된 포트폴리오 초기 화면입니다.
+                현재는 로그인 대신 게스트 닉네임이 자동으로 생성되어 표시됩니다.
+            </p>
+        </section>
+
+        <section class="body-sample">
+            <h3>임시 본문 영역</h3>
+            <p>여기에 프로젝트 소개, 기술 스택, 작업 기록 등을 차례대로 추가하면 됩니다.</p>
+        </section>
+    </main>
+</body>
+</html>
