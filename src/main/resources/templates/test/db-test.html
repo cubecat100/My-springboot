@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB 테스트</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .db-wrap {
+            max-width: 960px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .db-card {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .db-form textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            margin-top: 8px;
+            margin-bottom: 12px;
+            resize: vertical;
+        }
+
+        .db-form button {
+            padding: 10px 16px;
+            cursor: pointer;
+        }
+
+        .memo-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #eeeeee;
+        }
+
+        .memo-meta {
+            font-size: 13px;
+            color: #666666;
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+<header class="site-header">
+    <div class="header-left">
+        <h1 class="logo">My Portfolio</h1>
+    </div>
+    <div class="header-right">
+        <span class="guest-badge" th:text="${guestNickname}">게스트_기본닉네임</span>
+    </div>
+</header>
+
+<main class="db-wrap">
+    <section class="db-card">
+        <h2>DB 연결 테스트 페이지</h2>
+        <p>현재 게스트 닉네임으로 메모를 저장하고, 아래 목록에서 DB 조회 결과를 확인합니다.</p>
+
+        <form class="db-form" th:action="@{/db-test/save}" method="post">
+            <label for="content">메모 내용</label>
+            <textarea id="content" name="content" maxlength="500" required></textarea>
+            <button type="submit">DB에 저장</button>
+        </form>
+    </section>
+
+    <section class="db-card">
+        <h3>저장된 메모 목록</h3>
+
+        <div th:if="${#lists.isEmpty(memoList)}">
+            아직 저장된 메모가 없습니다.
+        </div>
+
+        <div th:each="memo : ${memoList}" class="memo-item">
+            <div class="memo-meta">
+                <strong th:text="${memo.guestNickname}">게스트닉네임</strong>
+                <span th:text="${#temporals.format(memo.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-03-18 16:00:00</span>
+            </div>
+            <div th:text="${memo.content}">메모 내용</div>
+        </div>
+    </section>
+
+    <section class="db-card">
+        <a th:href="@{/}">메인 화면으로 돌아가기</a>
+    </section>
+</main>
+</body>
+</html>

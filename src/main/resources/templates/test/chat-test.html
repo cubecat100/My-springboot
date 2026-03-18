@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<section class="body-sample">
+	    <h3>실시간 상태</h3>
+	    <p id="socketStatus">연결 전</p>
+	    <ul id="messageList"></ul>
+	</section>
+</body>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+
+<script th:inline="javascript">
+    const guestNickname = /*[[${guestNickname}]]*/ '게스트_기본닉네임';
+
+    const socketStatus = document.getElementById('socketStatus');
+    const messageList = document.getElementById('messageList');
+
+    const socket = new SockJS('/ws');
+    const stompClient = new StompJs.Client({
+        webSocketFactory: () => socket,
+        reconnectDelay: 5000,
+        onConnect: () => {
+            socketStatus.textContent = '연결됨';
+
+            stompClient.subscribe('/topic/guest', (frame) => {
+                const message = JSON.parse(frame.body);
+                const li = document.createElement('li');
+                li.textContent = message.content;
+                messageList.prepend(li);
+            });
+
+            stompClient.publish({
+                destination: '/app/guest.enter',
+                body: JSON.stringify({
+                    nickname: guestNickname
+                })
+            });
+        },
+        onStompError: (frame) => {
+            socketStatus.textContent = '오류: ' + frame.headers.message;
+        },
+        onWebSocketClose: () => {
+            socketStatus.textContent = '연결 종료';
+        }
+    });
+
+    stompClient.activate();
+</script>
+
+</html>

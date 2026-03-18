@@ -37,3 +37,6 @@ out/
 .vscode/
 
 .DS_Store
+
+### local ###
+src/main/resources/application-local.properties
