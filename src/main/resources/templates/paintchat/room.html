@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>그림 채팅방</title>
+    <link rel="stylesheet" th:href="@{/css/paintchat-common.css}" />
+    <link rel="stylesheet" th:href="@{/css/paintchat-room.css}" />
+</head>
+<body>
+<div class="page">
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="brand">방 번호 <span th:text="${roomName}">0001</span></div>
+            <div class="room-description" th:text="${drawEnabled} ? '저장된 그림이 재생된 뒤 이어서 그릴 수 있습니다.' : '이 방은 운영이 종료되어 저장된 그림 재생만 가능합니다.'">
+                저장된 그림이 재생된 뒤 이어서 그릴 수 있습니다.
+            </div>
+        </div>
+
+        <div class="topbar-right">
+            <a class="room-list-button" th:href="@{/paintchat/list}">방 목록으로 가기</a>
+            <span class="guest-badge">
+                게스트 <strong id="guest-nickname" th:text="${guestNickname}">guest-0001</strong>
+            </span>
+        </div>
+    </header>
+
+    <main class="content">
+        <section class="board-panel content-card">
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <label for="brush-color">색상</label>
+                    <input id="brush-color" type="color" value="#111111" th:disabled="${drawEnabled == false}" />
+
+                    <label for="brush-size">브러시</label>
+                    <input id="brush-size" type="range" min="1" max="24" value="4" th:disabled="${drawEnabled == false}" />
+                    <div id="brush-size-text" class="fixed-readout">4px</div>
+                </div>
+
+                <div class="toolbar-group">
+                    <div class="cursor-status">커서 좌표</div>
+                    <div id="cursor-position" class="fixed-readout">0, 0</div>
+                    <div id="replay-status" class="fixed-readout">재생 준비</div>
+                </div>
+            </div>
+
+            <div class="presence-panel">
+                <div class="presence-header">
+                    <strong>실시간 접속자</strong>
+                    <span id="presence-count" class="fixed-readout">0명</span>
+                </div>
+                <div id="presence-list" class="presence-list">
+                    <div class="presence-empty">접속자를 불러오는 중입니다.</div>
+                </div>
+            </div>
+
+            <div class="board-wrap" id="board-wrap">
+                <canvas id="board-canvas" class="board-canvas"></canvas>
+                <canvas id="cursor-layer" class="cursor-layer"></canvas>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+<script th:inline="javascript">
+    const guestNickname = /*[[${guestNickname}]]*/ 'guest-0001';
+    const roomId = /*[[${roomId}]]*/ 'lobby';
+    const drawEnabled = /*[[${drawEnabled}]]*/ true;
+    const drawHistory = /*[[${drawHistory}]]*/ [];
+</script>
+
+<script>
+    const WS_CONFIG = {
+        endpoint: '/ws',
+        subscribeDraw: `/topic/paintchat/${roomId}/draw.public`,
+        subscribeCursor: `/topic/paintchat/${roomId}/cursor.public`,
+        subscribePresence: `/topic/paintchat/${roomId}/presence.public`,
+        publishDraw: `/app/paintchat/${roomId}/draw.send`,
+        publishCursor: `/app/paintchat/${roomId}/cursor.move`,
+        publishPresenceJoin: `/app/paintchat/${roomId}/presence.join`,
+        publishPresenceLeave: `/app/paintchat/${roomId}/presence.leave`
+    };
+
+    const SAMPLE_DISTANCE_PX = 20;
+    const SAMPLE_INTERVAL_MS = 100;
+    const REPLAY_BATCH_SIZE = 10;
+
+    const boardWrap = document.getElementById('board-wrap');
+    const boardCanvas = document.getElementById('board-canvas');
+    const cursorLayer = document.getElementById('cursor-layer');
+    const brushColorInput = document.getElementById('brush-color');
+    const brushSizeInput = document.getElementById('brush-size');
+    const brushSizeText = document.getElementById('brush-size-text');
+    const cursorPosition = document.getElementById('cursor-position');
+    const replayStatus = document.getElementById('replay-status');
+    const presenceCount = document.getElementById('presence-count');
+    const presenceList = document.getElementById('presence-list');
+
+    const boardCtx = boardCanvas.getContext('2d');
+    const cursorCtx = cursorLayer.getContext('2d');
+
+    let stompClient = null;
+    let drawing = false;
+    let lastPoint = null;
+    let lastSentPoint = null;
+    let lastDrawSentAt = 0;
+    let pendingCursorPoint = null;
+    let cursorBroadcastTimerId = null;
+    let isHistoryReplaying = false;
+    let replayGeneration = 0;
+    const remoteCursors = new Map();
+    const queuedLiveSegments = [];
+
+    function createRandomColor() {
+        const randomNumber = Math.floor(Math.random() * 16777215);
+        return `#${randomNumber.toString(16).padStart(6, '0')}`;
+    }
+
+    function renderPresence(snapshot) {
+        const participants = Array.isArray(snapshot.participants) ? snapshot.participants : [];
+        presenceCount.textContent = `${snapshot.connectedCount || 0}명`;
+        presenceList.innerHTML = '';
+
+        if (participants.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'presence-empty';
+            empty.textContent = '현재 접속 중인 사용자가 없습니다.';
+            presenceList.appendChild(empty);
+            return;
+        }
+
+        for (let index = 0; index < participants.length; index += 1) {
+            const nickname = participants[index];
+            const item = document.createElement('div');
+            item.className = nickname === guestNickname ? 'presence-item mine' : 'presence-item';
+            item.textContent = nickname;
+            presenceList.appendChild(item);
+        }
+    }
+
+    function resetBoard() {
+        boardCtx.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
+        boardCtx.fillStyle = '#ffffff';
+        boardCtx.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+    }
+
+    function resizeCanvas() {
+        boardCanvas.width = boardWrap.clientWidth;
+        boardCanvas.height = boardWrap.clientHeight;
+        cursorLayer.width = boardWrap.clientWidth;
+        cursorLayer.height = boardWrap.clientHeight;
+
+        replayHistory(true);
+        renderRemoteCursors();
+    }
+
+    function normalizePoint(event) {
+        const rect = boardCanvas.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+        const y = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+
+        return {
+            x: x,
+            y: y,
+            ratioX: rect.width === 0 ? 0 : x / rect.width,
+            ratioY: rect.height === 0 ? 0 : y / rect.height
+        };
+    }
+
+    function denormalizePoint(ratioX, ratioY) {
+        return {
+            x: ratioX * boardCanvas.width,
+            y: ratioY * boardCanvas.height
+        };
+    }
+
+    function drawLine(fromX, fromY, toX, toY, color, size) {
+        boardCtx.beginPath();
+        boardCtx.moveTo(fromX, fromY);
+        boardCtx.lineTo(toX, toY);
+        boardCtx.strokeStyle = color;
+        boardCtx.lineWidth = size;
+        boardCtx.lineCap = 'round';
+        boardCtx.lineJoin = 'round';
+        boardCtx.stroke();
+    }
+
+    function drawSegmentPayload(payload) {
+        const from = denormalizePoint(payload.fromRatioX, payload.fromRatioY);
+        const to = denormalizePoint(payload.toRatioX, payload.toRatioY);
+        drawLine(from.x, from.y, to.x, to.y, payload.color, payload.size);
+    }
+
+    function sleep(milliseconds) {
+        return new Promise(function (resolve) {
+            window.setTimeout(resolve, milliseconds);
+        });
+    }
+
+    function distanceBetween(pointA, pointB) {
+        const dx = pointA.x - pointB.x;
+        const dy = pointA.y - pointB.y;
+        return Math.sqrt((dx * dx) + (dy * dy));
+    }
+
+    function shouldSampleNextPoint(point) {
+        if (lastSentPoint == null) {
+            return true;
+        }
+
+        const elapsed = Date.now() - lastDrawSentAt;
+        const movedDistance = distanceBetween(lastSentPoint, point);
+
+        if (movedDistance >= SAMPLE_DISTANCE_PX) {
+            return true;
+        }
+
+        return elapsed >= SAMPLE_INTERVAL_MS;
+    }
+
+    async function replayHistory(skipAnimation) {
+        const currentGeneration = ++replayGeneration;
+        resetBoard();
+
+        if (drawHistory.length === 0) {
+            replayStatus.textContent = '재생할 기록 없음';
+            isHistoryReplaying = false;
+            return;
+        }
+
+        isHistoryReplaying = true;
+        replayStatus.textContent = skipAnimation ? '그림 복원 중' : '그림 재생 중';
+
+        for (let index = 0; index < drawHistory.length; index += REPLAY_BATCH_SIZE) {
+            if (currentGeneration !== replayGeneration) {
+                return;
+            }
+
+            const batchEnd = Math.min(index + REPLAY_BATCH_SIZE, drawHistory.length);
+
+            for (let batchIndex = index; batchIndex < batchEnd; batchIndex += 1) {
+                drawSegmentPayload(drawHistory[batchIndex]);
+            }
+
+            if (skipAnimation === false) {
+                await sleep(10);
+            }
+        }
+
+        if (currentGeneration !== replayGeneration) {
+            return;
+        }
+
+        while (queuedLiveSegments.length > 0) {
+            drawSegmentPayload(queuedLiveSegments.shift());
+        }
+
+        isHistoryReplaying = false;
+        replayStatus.textContent = '재생 완료';
+    }
+
+    function drawCursor(x, y, nickname, isMine) {
+        cursorCtx.beginPath();
+        cursorCtx.arc(x, y, isMine ? 5 : 6, 0, Math.PI * 2);
+        cursorCtx.fillStyle = isMine ? '#2563eb' : '#ef4444';
+        cursorCtx.fill();
+
+        cursorCtx.fillStyle = '#111827';
+        cursorCtx.font = '13px Arial';
+        cursorCtx.fillText(nickname, x + 10, y - 10);
+    }
+
+    function renderRemoteCursors() {
+        cursorCtx.clearRect(0, 0, cursorLayer.width, cursorLayer.height);
+
+        const now = Date.now();
+        const expireMs = 3000;
+
+        if (pendingCursorPoint != null) {
+            drawCursor(pendingCursorPoint.x, pendingCursorPoint.y, guestNickname, true);
+        }
+
+        for (const [nickname, cursor] of remoteCursors.entries()) {
+            if (now - cursor.updatedAt > expireMs) {
+                remoteCursors.delete(nickname);
+                continue;
+            }
+
+            const point = denormalizePoint(cursor.ratioX, cursor.ratioY);
+            drawCursor(point.x, point.y, nickname, false);
+        }
+    }
+
+    function sendPresenceJoin() {
+        if (stompClient != null && stompClient.connected === true) {
+            stompClient.send(WS_CONFIG.publishPresenceJoin, {}, JSON.stringify({
+                guestNickname: guestNickname
+            }));
+        }
+    }
+
+    function sendPresenceLeave() {
+        if (stompClient != null && stompClient.connected === true) {
+            stompClient.send(WS_CONFIG.publishPresenceLeave, {}, JSON.stringify({
+                guestNickname: guestNickname
+            }));
+        }
+    }
+
+    function connectWebSocket() {
+        const socket = new SockJS(WS_CONFIG.endpoint);
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect({}, function () {
+            stompClient.subscribe(WS_CONFIG.subscribeDraw, function (frame) {
+                const payload = JSON.parse(frame.body);
+                drawHistory.push(payload);
+
+                if (payload.guestNickname === guestNickname) {
+                    return;
+                }
+
+                if (isHistoryReplaying) {
+                    queuedLiveSegments.push(payload);
+                    return;
+                }
+
+                drawSegmentPayload(payload);
+            });
+
+            stompClient.subscribe(WS_CONFIG.subscribeCursor, function (frame) {
+                const payload = JSON.parse(frame.body);
+                if (payload.guestNickname === guestNickname) {
+                    return;
+                }
+
+                remoteCursors.set(payload.guestNickname, {
+                    ratioX: payload.ratioX,
+                    ratioY: payload.ratioY,
+                    updatedAt: Date.now()
+                });
+
+                renderRemoteCursors();
+            });
+
+            stompClient.subscribe(WS_CONFIG.subscribePresence, function (frame) {
+                renderPresence(JSON.parse(frame.body));
+            });
+
+            sendPresenceJoin();
+        });
+    }
+
+    function scheduleCursorBroadcast(point) {
+        pendingCursorPoint = point;
+        renderRemoteCursors();
+
+        if (cursorBroadcastTimerId != null) {
+            return;
+        }
+
+        cursorBroadcastTimerId = window.setTimeout(function () {
+            cursorBroadcastTimerId = null;
+
+            if (pendingCursorPoint == null) {
+                return;
+            }
+
+            if (stompClient != null && stompClient.connected === true) {
+                stompClient.send(WS_CONFIG.publishCursor, {}, JSON.stringify({
+                    guestNickname: guestNickname,
+                    ratioX: pendingCursorPoint.ratioX,
+                    ratioY: pendingCursorPoint.ratioY
+                }));
+            }
+        }, 30);
+    }
+
+    function sendDrawSegment(fromPoint, toPoint) {
+        if (drawEnabled === false || isHistoryReplaying || stompClient == null || stompClient.connected !== true) {
+            return;
+        }
+
+        lastSentPoint = toPoint;
+        lastDrawSentAt = Date.now();
+
+        stompClient.send(WS_CONFIG.publishDraw, {}, JSON.stringify({
+            guestNickname: guestNickname,
+            color: brushColorInput.value,
+            size: Number(brushSizeInput.value),
+            fromRatioX: fromPoint.ratioX,
+            fromRatioY: fromPoint.ratioY,
+            toRatioX: toPoint.ratioX,
+            toRatioY: toPoint.ratioY
+        }));
+    }
+
+    boardCanvas.addEventListener('mousedown', function (event) {
+        if (drawEnabled === false || isHistoryReplaying) {
+            return;
+        }
+
+        drawing = true;
+        lastPoint = normalizePoint(event);
+        lastSentPoint = lastPoint;
+        lastDrawSentAt = Date.now();
+    });
+
+    window.addEventListener('mouseup', function () {
+        drawing = false;
+        lastPoint = null;
+        lastSentPoint = null;
+    });
+
+    boardCanvas.addEventListener('mouseleave', function () {
+        drawing = false;
+        lastPoint = null;
+        lastSentPoint = null;
+    });
+
+    boardCanvas.addEventListener('mousemove', function (event) {
+        const point = normalizePoint(event);
+
+        cursorPosition.textContent = `${Math.round(point.x)}, ${Math.round(point.y)}`;
+        scheduleCursorBroadcast(point);
+
+        if (drawEnabled === false || isHistoryReplaying || drawing === false || lastPoint == null) {
+            return;
+        }
+
+        if (shouldSampleNextPoint(point) === false) {
+            return;
+        }
+
+        drawLine(
+            lastPoint.x,
+            lastPoint.y,
+            point.x,
+            point.y,
+            brushColorInput.value,
+            Number(brushSizeInput.value)
+        );
+
+        sendDrawSegment(lastPoint, point);
+        lastPoint = point;
+    });
+
+    brushSizeInput.addEventListener('input', function () {
+        brushSizeText.textContent = `${brushSizeInput.value}px`;
+    });
+
+    window.addEventListener('beforeunload', sendPresenceLeave);
+    window.addEventListener('resize', resizeCanvas);
+
+    brushColorInput.value = createRandomColor();
+    resizeCanvas();
+    replayHistory(false);
+    connectWebSocket();
+    window.setInterval(renderRemoteCursors, 200);
+</script>
+</body>
+</html>

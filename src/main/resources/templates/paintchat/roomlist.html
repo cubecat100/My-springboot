@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>그림 채팅방 목록</title>
+    <link rel="stylesheet" th:href="@{/css/paintchat-common.css}" />
+    <link rel="stylesheet" th:href="@{/css/paintchat-list.css}" />
+</head>
+<body>
+<div class="page">
+    <header class="topbar">
+        <div>
+            <div class="brand">그림 채팅방 목록</div>
+            <div class="muted-text">실시간으로 그림을 그려서 소통을 할수 있습니다.</div>
+            <div class="muted-text">운영 종료된 방은 저장된 그림만 재생 가능합니다.</div>
+        </div>
+        <div class="guest-box">
+            게스트
+            <strong th:text="${guestNickname}">guest-0001</strong>
+        </div>
+    </header>
+
+    <main class="content content-card">
+        <div class="page-actions">
+            <a class="main-link-button" th:href="@{/}">메인으로 가기</a>
+        </div>
+
+        <div th:if="${roomErrorMessage}" class="flash-message" th:text="${roomErrorMessage}">
+            요청한 채팅방을 찾을 수 없습니다.
+        </div>
+        <div th:if="${roomCreatedMessage}" class="flash-message success-message" th:text="${roomCreatedMessage}">
+            채팅방이 생성되었습니다.
+        </div>
+
+        <section class="create-room-panel">
+            <div class="section-head">
+                <h1>채팅방 만들기</h1>
+                <div class="muted-text" th:text="'하루 최대 ' + ${dailyCreationLimit} + '개까지 생성할 수 있습니다.'">하루 최대 3개까지 생성할 수 있습니다.</div>
+            </div>
+
+            <form class="create-room-form" th:action="@{/paintchat/rooms}" method="post">
+                <button class="create-room-button" type="submit" th:disabled="${dailyLimitReached}">원클릭 채팅방 생성</button>
+            </form>
+        </section>
+
+        <section class="room-list-panel">
+            <div class="content-head">
+                <h2>저장된 채팅방</h2>
+            </div>
+
+            <div class="room-grid">
+                <article class="room-card" th:each="room : ${roomList}">
+                    <div class="room-name" th:text="${room.roomName}">0001</div>
+                    <div class="room-id" th:text="${room.drawEnabled} ? '운영 중' : '운영 종료 · 재생 전용'">운영 중</div>
+
+                    <a class="enter-button"
+                       th:href="@{/paintchat/{roomId}(roomId=${room.roomId})}">
+                        입장하기
+                    </a>
+                </article>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>
