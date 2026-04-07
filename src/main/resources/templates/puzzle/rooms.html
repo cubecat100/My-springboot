@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${puzzleType.title} + ' &#xD480;&#xC774;&#xBC29;'">&#xD37C;&#xC990; &#xD480;&#xC774;&#xBC29;</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/puzzle.css}">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-left">
+            <a class="text-home-link" th:href="@{/}">&#xD37C;&#xC990; &#xD22C;&#xAC8C;&#xB354;</a>
+            <p class="logo-copy" th:text="${puzzleType.title} + ' &#xBC29; &#xBAA9;&#xB85D;'">&#xD37C;&#xC990; &#xBC29; &#xBAA9;&#xB85D;</p>
+        </div>
+
+        <div class="header-right">
+            <span class="guest-badge" th:text="${guestNickname}">guest-0001</span>
+        </div>
+    </header>
+
+    <main class="content">
+        <section class="hero hero-puzzle">
+            <span class="eyebrow">2&#xB2E8;&#xACC4;</span>
+            <h1 th:text="${puzzleType.title}">&#xB85C;&#xC9C1; &#xADF8;&#xB9AC;&#xB4DC;</h1>
+            <p th:text="${puzzleType.summary}">&#xD37C;&#xC990; &#xC124;&#xBA85;</p>
+
+            <div class="hero-actions">
+                <a class="secondary-link-button" th:href="@{/puzzles}">&#xD37C;&#xC990; &#xC885;&#xB958;&#xB85C;</a>
+                <form method="post" th:action="@{|/puzzles/${puzzleType.code}/rooms|}">
+                    <button class="main-link-button" type="submit">&#xC0C8; &#xBC29; &#xB9CC;&#xB4E4;&#xAE30;</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="flash-message success-message" th:if="${roomCreatedMessage}" th:text="${roomCreatedMessage}"></section>
+        <section class="flash-message error-message" th:if="${roomErrorMessage}" th:text="${roomErrorMessage}"></section>
+
+        <section class="room-list-section">
+            <article class="room-card" th:each="room : ${roomList}">
+                <div class="room-card-head">
+                    <div>
+                        <span class="status-chip" th:text="${room.statusLabel}">&#xBAA8;&#xC9D1; &#xC911;</span>
+                        <h2 th:text="${room.roomName}">&#xCD08;&#xBCF4; &#xD658;&#xC601; &#xB85C;&#xC9C1;&#xBC29;</h2>
+                    </div>
+                    <span class="capacity-copy" th:text="|${room.currentPlayers} / ${room.maxPlayers}명|">2 / 4명</span>
+                </div>
+                <p th:text="${room.roomDescription}">&#xBC29; &#xC124;&#xBA85;</p>
+                <a class="text-link" th:href="@{|/puzzles/${puzzleType.code}/rooms/${room.roomId}|}">&#xC785;&#xC7A5;&#xD558;&#xAE30;</a>
+            </article>
+        </section>
+    </main>
+</body>
+</html>

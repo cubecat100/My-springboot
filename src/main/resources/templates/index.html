@@ -13,22 +13,24 @@
         </div>
 
         <div class="header-right">
-            <span class="guest-badge" th:text="${guestNickname}">게스트_기본닉네임</span>
+            <span class="guest-badge" th:text="${guestNickname}">guest-0001</span>
         </div>
     </header>
 
     <main class="content">
         <section class="hero">
-            <h2>포트폴리오에 오신 것을 환영합니다.</h2>
-            <p>
-                이 페이지는 Spring Boot 기반으로 구성된 포트폴리오 초기 화면입니다.
-                현재는 로그인 대신 게스트 닉네임이 자동으로 생성되어 표시됩니다.
-            </p>
+            <h2>포트폴리오</h2>
+            <p>이 페이지는 Spring Boot 기반으로 구성된 메인 화면입니다. </p>
+            <p>현재 게스트 닉네임이 자동으로 생성되어 표시되고 있습니다.</p>
         </section>
 
         <section class="body-sample">
-            <h3>임시 본문 영역</h3>
-            <p>여기에 프로젝트 소개, 기술 스택, 작업 기록 등을 차례대로 추가하면 됩니다.</p>
+            <h3>배포중인 서비스</h3>
+            <p>
+                <a class="main-link-button" th:href="@{/paintchat/list}">그림 채팅방 목록으로 가기</a>
+            </p>
+            
+            
         </section>
     </main>
 </body>

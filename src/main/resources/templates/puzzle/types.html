@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>&#xD37C;&#xC990; &#xC885;&#xB958; &#xC120;&#xD0DD;</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/puzzle.css}">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-left">
+            <a class="text-home-link" th:href="@{/}">&#xD37C;&#xC990; &#xD22C;&#xAC8C;&#xB354;</a>
+            <p class="logo-copy">&#xD611;&#xB3D9; &#xD50C;&#xB808;&#xC774;&#xC5D0; &#xB9DE;&#xB294; &#xD37C;&#xC990;&#xC744; &#xACE8;&#xB77C;&#xBCF4;&#xC138;&#xC694;.</p>
+        </div>
+
+        <div class="header-right">
+            <span class="guest-badge" th:text="${guestNickname}">guest-0001</span>
+        </div>
+    </header>
+
+    <main class="content">
+        <section class="hero hero-puzzle">
+            <span class="eyebrow">1&#xB2E8;&#xACC4;</span>
+            <h1>&#xC5B4;&#xB5A4; &#xD37C;&#xC990;&#xC744; &#xAC19;&#xC774; &#xD480;&#xAE4C;&#xC694;?</h1>
+            <p>&#xC9C0;&#xAE08;&#xC740; DB &#xC5C6;&#xC774;&#xB3C4; &#xC804;&#xCCB4; &#xC9C4;&#xC785; &#xD750;&#xB984;&#xC744; &#xD655;&#xC778;&#xD560; &#xC218; &#xC788;&#xB3C4;&#xB85D; &#xC0D8;&#xD50C; &#xB370;&#xC774;&#xD130;&#xB97C; &#xBA54;&#xBAA8;&#xB9AC;&#xB85C; &#xAD6C;&#xC131;&#xD588;&#xC2B5;&#xB2C8;&#xB2E4;.</p>
+        </section>
+
+        <section class="puzzle-grid">
+            <article class="puzzle-card" th:each="puzzleType : ${puzzleTypes}">
+                <div class="puzzle-card-top">
+                    <span class="difficulty-chip" th:text="${puzzleType.difficultyLabel}">&#xC911;&#xAC04;</span>
+                    <h2 th:text="${puzzleType.title}">&#xB85C;&#xC9C1; &#xADF8;&#xB9AC;&#xB4DC;</h2>
+                </div>
+                <p th:text="${puzzleType.summary}">&#xD37C;&#xC990; &#xC124;&#xBA85;</p>
+                <a class="main-link-button" th:href="@{|/puzzles/${puzzleType.code}|}">&#xC774; &#xC885;&#xB958;&#xB85C; &#xB4E4;&#xC5B4;&#xAC00;&#xAE30;</a>
+            </article>
+        </section>
+    </main>
+</body>
+</html>

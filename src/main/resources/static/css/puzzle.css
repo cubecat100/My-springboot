@@ -1,0 +1,177 @@
+@charset "UTF-8";
+
+.text-home-link {
+    color: #18212f;
+    text-decoration: none;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.hero-puzzle {
+    background:
+        radial-gradient(circle at top left, rgba(251, 191, 36, 0.24), transparent 28%),
+        linear-gradient(135deg, #fff8eb 0%, #ffffff 58%, #eef7ff 100%);
+}
+
+.eyebrow {
+    display: inline-block;
+    margin-bottom: 14px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background-color: #18212f;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.puzzle-grid,
+.room-list-section,
+.room-layout {
+    display: grid;
+    gap: 20px;
+}
+
+.puzzle-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.puzzle-card,
+.room-card,
+.room-panel {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.puzzle-card-top,
+.room-card-head,
+.hero-actions,
+.room-meta-row,
+.room-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.difficulty-chip,
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.difficulty-chip {
+    background-color: #fff1c2;
+    color: #92400e;
+}
+
+.status-chip {
+    background-color: #dff7e6;
+    color: #166534;
+}
+
+.secondary-link-button,
+.ghost-button,
+.text-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.secondary-link-button,
+.ghost-button {
+    padding: 12px 18px;
+}
+
+.secondary-link-button {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #18212f;
+}
+
+.ghost-button {
+    border: 1px dashed #94a3b8;
+    background-color: #f8fafc;
+    color: #475569;
+}
+
+.text-link {
+    color: #1d4ed8;
+}
+
+.capacity-copy {
+    color: #475569;
+    font-weight: 600;
+}
+
+.flash-message {
+    margin-bottom: 16px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-weight: 600;
+}
+
+.success-message {
+    background-color: #ecfdf5;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.error-message {
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.room-layout {
+    grid-template-columns: 2fr 1fr;
+}
+
+.placeholder-board {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    margin-top: 20px;
+    border-radius: 18px;
+    border: 1px dashed #94a3b8;
+    background:
+        linear-gradient(135deg, rgba(29, 78, 216, 0.08), rgba(251, 191, 36, 0.12)),
+        #f8fafc;
+    color: #1e3a8a;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.role-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #334155;
+}
+
+.role-list li + li {
+    margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+    .room-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .text-home-link {
+        font-size: 24px;
+    }
+}

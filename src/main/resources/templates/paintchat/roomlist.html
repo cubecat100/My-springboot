@@ -54,10 +54,7 @@
                     <div class="room-name" th:text="${room.roomName}">0001</div>
                     <div class="room-id" th:text="${room.drawEnabled} ? '운영 중' : '운영 종료 · 재생 전용'">운영 중</div>
 
-                    <a class="enter-button"
-                       th:href="@{/paintchat/{roomId}(roomId=${room.roomId})}">
-                        입장하기
-                    </a>
+                    <a class="enter-button"th:href="@{/paintchat/{roomId}(roomId=${room.roomId})}">입장하기</a>
                 </article>
             </div>
         </section>
